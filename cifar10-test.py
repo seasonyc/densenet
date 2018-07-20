@@ -197,19 +197,6 @@ def main(learning_rate, name = '', error_anal = False,
     if error_anal:
         error_analyze(model, x_validation, y_validation)
  
-def main400(learning_rate, name = '', error_anal = False,
-         growth_rate=12, dropout_rate=0.2, bottleneck=False, compression=1.0, aug=False):
-    (x_train, y_train), (x_validation, y_validation) = load_data()
-    
-    model = densenet.DenseNet(input_shape=x_train.shape[1:], nb_classes=num_classes, 
-                              depth=40, dense_blocks=3, growth_rate=growth_rate,
-                              dropout_rate=dropout_rate, bottleneck=bottleneck, compression=compression)
-    model.summary()  
-    train(model, x_train, y_train, x_validation, y_validation,
-          epochs_list = [200, 300, 400], name = name, learning_rate = learning_rate, data_augmentation = aug)
-    
-    if error_anal:
-        error_analyze(model, x_validation, y_validation)
         
 '''    
 test(model_file = 'denseaugmodel-ep0290-loss0.143-acc0.997-val_loss0.320-val_acc0.947.h5')
@@ -218,35 +205,13 @@ test(model_file = 'densenoaugmodel-ep0300-loss0.127-acc0.999-val_loss0.382-val_a
 '''
 
 '''
-print('\n\n\n\n\n\n\ntest learning_rate = 0.1 wide densenet k=48 aug no dropout' )
-main(0.1, name = 'widedense', dropout_rate=None, aug=True, growth_rate=36, bottleneck=True, compression=0.5)
-
-print('\n\n\n\n\n\n\ntest learning_rate = 0.1 wide densenet k=48 aug no dropout' )
-main(0.1, name = 'widedense', dropout_rate=None, aug=True, growth_rate=48, bottleneck=True, compression=0.5)
-
-print('\n\n\n\n\n\n\ntest learning_rate = 0.1 wide densenet k=48 aug dropout=0.2' )
-main(0.1, name = 'widedense', dropout_rate=0.2, aug=True, growth_rate=48, bottleneck=True, compression=0.5)
-'''
-
-print('\n\n\n\n\n\n\ntest learning_rate = 0.1 wide densenet k=48 aug dropout=0.2' )
-main(0.1, name = 'widedense', dropout_rate=0.2, aug=True, growth_rate=48, bottleneck=True, compression=0.5)
-
-print('\n\n\n\n\n\n\ntest learning_rate = 0.1 wide densenet k=48 aug no dropout train 400' )
-main400(0.1, name = 'widedense', dropout_rate=None, aug=True, growth_rate=48, bottleneck=True, compression=0.5)
-
-'''
 print('\n\n\n\n\n\n\ntest learning_rate = 0.1 densenet k=12 aug no dropout' )
 main(0.1, name = 'denseaug', dropout_rate=None, aug=True)
 
 print('\n\n\n\n\n\n\ntest learning_rate = 0.1 densenet k=12 no aug dropout=0.2' )
 main(0.1, name = 'densenoaug')
-
-
-
-print('\n\n\n\n\n\n\ntest learning_rate = 0.1 wide densenet k=48 aug dropout=0.2' )
-main(0.1, name = 'widedense', dropout_rate=None, aug=True, growth_rate=48, bottleneck=True, compression=0.5)
-main(0.1, name = 'widedense', aug=True, growth_rate=48, bottleneck=True, compression=0.5)
 '''
 
-#model.save_weights("mcnet.h5")
-#model.load_weights(filepath, by_name=False)
+
+print('\n\n\n\n\n\n\ntest learning_rate = 0.1 wide densenet k=48 aug no dropout' )
+main(0.1, name = 'widedense', dropout_rate=None, aug=True, growth_rate=48, bottleneck=True, compression=0.5)
