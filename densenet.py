@@ -98,20 +98,6 @@ def dense_block(x, nb_layers, nb_channels, growth_rate, dropout_rate=None, bottl
     return x, nb_channels
 
 
-def incremental_dense_block(x, nb_layers, nb_channels, growth_rate, dropout_rate=None, bottleneck=False, weight_decay=1e-4):
-    """
-    Creates a dense block and concatenates inputs
-    """
-    
-    x_list = [x]
-    growth_rate -= nb_layers // 2
-    for i in range(nb_layers):
-        cb = convolution_block(x, growth_rate, dropout_rate, bottleneck, weight_decay)
-        x_list.append(cb)
-        x = Concatenate(axis=-1)(x_list)
-        nb_channels += growth_rate
-        growth_rate += 1
-    return x, nb_channels
 
 def convolution_block(x, nb_channels, dropout_rate=None, bottleneck=False, weight_decay=1e-4):
     """
