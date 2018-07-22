@@ -19,12 +19,21 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from keras.callbacks import TensorBoard, LearningRateScheduler, ModelCheckpoint
 import densenet
-
+import incremental_densenet
+import testnet
 
 #from lsuv_init import LSUVinit 
  
 num_classes = 10 
           
+def image_norm(dataset):
+    mean = np.array([125.3, 123.0, 113.9])
+    std = np.array([63.0, 62.1, 66.7])
+
+    dataset -= mean
+    dataset /= std
+
+    return dataset
 
 def load_data():
     # The data, shuffled and split between train and test sets: 
@@ -39,8 +48,8 @@ def load_data():
     
     x_train = x_train.astype('float32') 
     x_test = x_test.astype('float32') 
-    x_train /= 255 
-    x_test /= 255 
+    x_train = image_norm(x_train) 
+    x_test = image_norm(x_test) 
     index_v = np.load("validation_index.npy")
     return (x_train, y_train), (x_test[index_v,], y_test[index_v])
 
@@ -80,6 +89,7 @@ def train(model, x_train, y_train, x_validation, y_validation,
           epochs_list, name,#225 50% 75% /10.
           batch_size = 64,  
           learning_rate = 1e-3,#0.0003
+          lr_decay_ratio = 0.1,
           data_augmentation = True ):
     
     # initiate RMSprop optimizer 
@@ -105,12 +115,13 @@ def train(model, x_train, y_train, x_validation, y_validation,
     checkpoint = ModelCheckpoint(filepath, verbose=1, save_best_only=True, period=10)
 
     def schedule(epoch):
-        if epoch < epochs_list[0]:
-            return learning_rate
-        elif epoch < epochs_list[1]:
-            return learning_rate / 10.
-        else:
-            return learning_rate / 100.
+        lr = learning_rate;
+        for epochs in epochs_list:
+            if epoch >= epochs:
+                lr *= lr_decay_ratio
+            else:
+                break
+        return lr
     
     lr_scheduler = LearningRateScheduler(schedule, verbose=1)
         
@@ -128,6 +139,11 @@ def train(model, x_train, y_train, x_validation, y_validation,
         # This will do preprocessing and realtime data augmentation: 
     
         datagen = ImageDataGenerator( 
+            horizontal_flip=True,
+            width_shift_range=0.125,
+            height_shift_range=0.125,
+            fill_mode='constant')
+        '''
             featurewise_center=False,  # set input mean to 0 over the dataset 
             samplewise_center=False,  # set each sample mean to 0 
             featurewise_std_normalization=False,  # divide inputs by std of the dataset 
@@ -138,7 +154,7 @@ def train(model, x_train, y_train, x_validation, y_validation,
             height_shift_range=0.2,  # randomly shift images vertically (fraction of total height) 
             horizontal_flip=True,  # randomly flip images 
             vertical_flip=False)  # randomly flip images 
-     
+        '''
         # Compute quantities required for feature-wise normalization 
         # (std, mean, and principal components if ZCA whitening is applied). 
         datagen.fit(x_train) 
@@ -167,7 +183,7 @@ def load_test_data():
     y_test = keras.utils.to_categorical(y_test, num_classes) 
     
     x_test = x_test.astype('float32') 
-    x_test /= 255 
+    x_test = image_norm(x_test)
     index_t = np.load("test_index.npy")
     return x_test[index_t,], y_test[index_t]
 
@@ -193,25 +209,74 @@ def main(learning_rate, name = '', error_anal = False,
     model.summary()  
     train(model, x_train, y_train, x_validation, y_validation,
           epochs_list = [150, 225, 300], name = name, learning_rate = learning_rate, data_augmentation = aug)
-    
+
     if error_anal:
         error_analyze(model, x_validation, y_validation)
  
-        
+
+  
+
+      
 '''    
 test(model_file = 'denseaugmodel-ep0290-loss0.143-acc0.997-val_loss0.320-val_acc0.947.h5')
 
 test(model_file = 'densenoaugmodel-ep0300-loss0.127-acc0.999-val_loss0.382-val_acc0.935.h5')
 '''
 
+
+print('\n\n\n\n\n\n\ntest learning_rate = 0.1 wide densenet k=48 aug no dropout' )
+main(0.1, name = 'widedense', dropout_rate=None, aug=True, growth_rate=48, bottleneck=True, compression=0.5)
+
+
+
 '''
+
+def main_incremental(learning_rate, name = '', error_anal = False,
+         growth_rate=12, dropout_rate=0.2, bottleneck=False, compression=1.0, aug=False):
+    (x_train, y_train), (x_validation, y_validation) = load_data()
+    
+    model = incremental_densenet.DenseNet(input_shape=x_train.shape[1:], nb_classes=num_classes, 
+                              depth=40, dense_blocks=3, growth_rate=growth_rate,
+                              dropout_rate=dropout_rate, bottleneck=bottleneck, compression=compression)
+    model.summary()  
+    train(model, x_train, y_train, x_validation, y_validation,
+          epochs_list = [150, 225, 300], name = name, learning_rate = learning_rate, data_augmentation = aug)
+    
+    if error_anal:
+        error_analyze(model, x_validation, y_validation)
+        
+def main_testnet(learning_rate, name = '', error_anal = False,
+         growth_rate=12, dropout_rate=0.2, bottleneck=False, compression=1.0, aug=False):
+    (x_train, y_train), (x_validation, y_validation) = load_data()
+    
+    model = testnet.test_net(input_shape=x_train.shape[1:], num_classes=num_classes, dropout_rate=dropout_rate)
+    
+    model.summary()  
+    train(model, x_train, y_train, x_validation, y_validation,
+          epochs_list = [150, 225, 300], name = name, learning_rate = learning_rate, data_augmentation = aug)
+    
+    if error_anal:
+        error_analyze(model, x_validation, y_validation)
+
+print('\n\n\n\n\n\n\ntest learning_rate = 0.1 incremental densenet k=12 aug no dropout' )
+main_incremental(0.1, name = 'in_denseaug', dropout_rate=None, aug=True)
+
+print('\n\n\n\n\n\n\ntest learning_rate = 0.1 incremental densenet k=12 aug no dropout' )
+main_testnet(0.1, name = 'testnet', dropout_rate=None, aug=True)
+
+
+
+
 print('\n\n\n\n\n\n\ntest learning_rate = 0.1 densenet k=12 aug no dropout' )
 main(0.1, name = 'denseaug', dropout_rate=None, aug=True)
 
 print('\n\n\n\n\n\n\ntest learning_rate = 0.1 densenet k=12 no aug dropout=0.2' )
 main(0.1, name = 'densenoaug')
+
+
+
+
 '''
 
-
-print('\n\n\n\n\n\n\ntest learning_rate = 0.1 wide densenet k=48 aug no dropout' )
-main(0.1, name = 'widedense', dropout_rate=None, aug=True, growth_rate=48, bottleneck=True, compression=0.5)
+#model.save_weights("mcnet.h5")
+#model.load_weights(filepath, by_name=False)
