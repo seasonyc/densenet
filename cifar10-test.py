@@ -26,7 +26,7 @@ import testnet
  
 num_classes = 10 
           
-def image_norm(dataset):
+def color_norm(dataset):
     mean = np.array([125.3, 123.0, 113.9])
     std = np.array([63.0, 62.1, 66.7])
 
@@ -48,8 +48,8 @@ def load_data():
     
     x_train = x_train.astype('float32') 
     x_test = x_test.astype('float32') 
-    x_train = image_norm(x_train) 
-    x_test = image_norm(x_test) 
+    x_train = color_norm(x_train) 
+    x_test = color_norm(x_test) 
     index_v = np.load("validation_index.npy")
     return (x_train, y_train), (x_test[index_v,], y_test[index_v])
 
@@ -183,7 +183,7 @@ def load_test_data():
     y_test = keras.utils.to_categorical(y_test, num_classes) 
     
     x_test = x_test.astype('float32') 
-    x_test = image_norm(x_test)
+    x_test = color_norm(x_test)
     index_t = np.load("test_index.npy")
     return x_test[index_t,], y_test[index_t]
 
