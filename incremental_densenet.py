@@ -83,7 +83,8 @@ def DenseNet(input_shape=None, dense_blocks=3, dense_layers=-1, growth_rate=12, 
     
     x = Dense(nb_classes, activation='softmax', kernel_regularizer=l2(weight_decay), bias_regularizer=l2(weight_decay))(x)
     
-    return Model(img_input, x, name='densenet')
+    model_name = 'in_dense'
+    return Model(img_input, x, name=model_name), model_name
 
 
 

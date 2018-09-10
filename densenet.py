@@ -81,7 +81,13 @@ def DenseNet(input_shape=None, dense_blocks=3, dense_layers=-1, growth_rate=12, 
     
     x = Dense(nb_classes, activation='softmax', kernel_regularizer=l2(weight_decay), bias_regularizer=l2(weight_decay))(x)
     
-    return Model(img_input, x, name='densenet')
+    model_name = None
+    if growth_rate >= 36:
+        model_name = 'widedense'
+    else:
+        model_name = 'dense'
+    
+    return Model(img_input, x, name=model_name), model_name
 
 
 def dense_block(x, nb_layers, nb_channels, growth_rate, dropout_rate=None, bottleneck=False, weight_decay=1e-4):
@@ -96,7 +102,6 @@ def dense_block(x, nb_layers, nb_channels, growth_rate, dropout_rate=None, bottl
         x = Concatenate(axis=-1)(x_list)
         nb_channels += growth_rate
     return x, nb_channels
-
 
 
 def convolution_block(x, nb_channels, dropout_rate=None, bottleneck=False, weight_decay=1e-4):
