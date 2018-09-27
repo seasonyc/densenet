@@ -4,12 +4,12 @@ import numpy as np
 
 
 
-model = load_model('denseaugmodel-ep0290-loss0.143-acc0.997-val_loss0.320-val_acc0.947.h5')
+model = load_model('dense_augmodel-ep0300-loss0.112-acc0.999-val_loss0.332-val_acc0.946.h5')
 
 model.summary()  
 
 
-layer_names = ['conv2d_65', 'conv2d_66', 'conv2d_67']
+layer_names = ['conv2d_14', 'conv2d_15', 'conv2d_16']
 
 for layer_name in layer_names:
     layer_idx = utils.find_layer_idx(model, layer_name)

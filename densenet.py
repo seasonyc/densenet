@@ -43,9 +43,9 @@ def DenseNet(input_shape=None, dense_blocks=3, dense_layers=-1, growth_rate=12, 
             raise AssertionError('Number of dense blocks have to be same length to specified layers')
     elif dense_layers == -1:
         if bottleneck:
-            dense_layers = (depth - 4)/dense_blocks // 2
+            dense_layers = (depth - (dense_blocks + 1))/dense_blocks // 2
         else:
-            dense_layers = (depth - 4)//dense_blocks
+            dense_layers = (depth - (dense_blocks + 1))//dense_blocks
         dense_layers = [int(dense_layers) for _ in range(dense_blocks)]
     else:
         dense_layers = [int(dense_layers) for _ in range(dense_blocks)]
@@ -64,17 +64,16 @@ def DenseNet(input_shape=None, dense_blocks=3, dense_layers=-1, growth_rate=12, 
                       use_bias=False, kernel_regularizer=l2(weight_decay))(img_input)
     
     # Building dense blocks
-    for block in range(dense_blocks - 1):
+    for block in range(dense_blocks):
         
         # Add dense block
         x, nb_channels = dense_block(x, dense_layers[block], nb_channels, growth_rate, dropout_rate, bottleneck, weight_decay)
         
-        # Add transition_block
-        x = transition_layer(x, nb_channels, dropout_rate, compression, weight_decay)
-        nb_channels = int(nb_channels * compression)
+        if block < dense_blocks - 1:  # if it's not the last dense block
+            # Add transition_block
+            x = transition_layer(x, nb_channels, dropout_rate, compression, weight_decay)
+            nb_channels = int(nb_channels * compression)
     
-    # Add last dense block without transition but for that with global average pooling
-    x, nb_channels = dense_block(x, dense_layers[-1], nb_channels, growth_rate, dropout_rate, weight_decay)
     x = BatchNormalization(gamma_regularizer=l2(weight_decay), beta_regularizer=l2(weight_decay))(x)
     x = Activation('relu')(x)
     x = GlobalAveragePooling2D()(x)
@@ -86,7 +85,13 @@ def DenseNet(input_shape=None, dense_blocks=3, dense_layers=-1, growth_rate=12, 
         model_name = 'widedense'
     else:
         model_name = 'dense'
-    
+        
+    if bottleneck:
+        model_name = model_name + 'b'
+        
+    if compression < 1.0:
+        model_name = model_name + 'c'
+        
     return Model(img_input, x, name=model_name), model_name
 
 
