@@ -22,11 +22,18 @@ from keras.callbacks import TensorBoard, LearningRateScheduler, ModelCheckpoint
 import densenet
 import incremental_densenet
 import testnet
-
  
 num_classes = 10 
 
-
+def color_norm(dataset):
+    mean = np.array([125.3, 123.0, 113.9])
+    std = np.array([63.0, 62.1, 66.7])
+    dataset -= mean
+    dataset /= std
+    
+    #dataset /= 255 
+    return dataset
+ 
 def load_data():
     # The data, shuffled and split between train and test sets: 
     (x_train, y_train), (x_test, y_test) = cifar10.load_data() 
@@ -40,8 +47,8 @@ def load_data():
     
     x_train = x_train.astype('float32') 
     x_test = x_test.astype('float32') 
-    x_train /= 255 
-    x_test /= 255 
+    x_train = color_norm(x_train) 
+    x_test = color_norm(x_test) 
     index_v = np.load("validation_index.npy")
     return (x_train, y_train), (x_test[index_v,], y_test[index_v])
 
@@ -119,16 +126,10 @@ def train(model, x_train, y_train, x_validation, y_validation,
         # This will do preprocessing and realtime data augmentation: 
     
         datagen = ImageDataGenerator( 
-            featurewise_center=False,  # set input mean to 0 over the dataset 
-            samplewise_center=False,  # set each sample mean to 0 
-            featurewise_std_normalization=False,  # divide inputs by std of the dataset 
-            samplewise_std_normalization=False,  # divide each input by its std 
-            zca_whitening=False,  # apply ZCA whitening 
-            rotation_range=10,  # randomly rotate images in the range (degrees, 0 to 180) 
-            width_shift_range=0.2,  # randomly shift images horizontally (fraction of total width) 
-            height_shift_range=0.2,  # randomly shift images vertically (fraction of total height) 
-            horizontal_flip=True,  # randomly flip images 
-            vertical_flip=False)  # randomly flip images 
+            horizontal_flip=True,
+            width_shift_range=0.125,
+            height_shift_range=0.125,
+            fill_mode='constant') 
 
         datagen.fit(x_train) 
         
@@ -157,7 +158,7 @@ def load_test_data():
     y_test = keras.utils.to_categorical(y_test, num_classes) 
     
     x_test = x_test.astype('float32') 
-    x_test /= 255 
+    x_test = color_norm(x_test)
     index_t = np.load("test_index.npy")
     return x_test[index_t,], y_test[index_t]
 
@@ -189,12 +190,12 @@ def get_aug_str(aug):
         return '_noaug'
     
     
-def main_dense(learning_rate, network, error_anal = False,
+def main_dense(learning_rate, network, error_anal = False, depth = 40,
          growth_rate=12, dropout_rate=0.2, bottleneck=False, compression=1.0, aug=False):
     (x_train, y_train), (x_validation, y_validation) = load_data()
     
     model, model_name = network(input_shape=x_train.shape[1:], nb_classes=num_classes, 
-                              depth=40, dense_blocks=3, growth_rate=growth_rate,
+                              depth=depth, dense_blocks=3, growth_rate=growth_rate,
                               dropout_rate=dropout_rate, bottleneck=bottleneck, compression=compression)
     model.summary()  
     train(model, x_train, y_train, x_validation, y_validation,
@@ -219,16 +220,23 @@ def main_testnet(learning_rate, network, func_block, error_anal = False, dropout
     if error_anal:
         error_analyze(model, x_validation, y_validation)
         
-        
+
+
+
 
 print('\n\n\n\n\n\n\ntest learning_rate = 0.1 densenet k=12 aug no dropout' )
 main_dense(0.1, densenet.DenseNet, dropout_rate=None, aug=True)
 
-'''
+
+
+'''     
 To train other models
 print('\n\n\n\n\n\n\ntest learning_rate = 0.1 densenet k=12 no aug dropout=0.2' )
 main_dense(0.1, densenet.DenseNet)
        
+print('\n\n\n\n\n\n\ntest learning_rate = 0.1 densenet-B depth=76 k=12 aug no dropout' )
+main_dense(0.1, densenet.DenseNet, depth = 76, dropout_rate=None, aug=True, bottleneck=True)
+
 print('\n\n\n\n\n\n\ntest learning_rate = 0.1 wide densenet k=48 aug no dropout' )
 main_dense(0.1, densenet.DenseNet, dropout_rate=None, aug=True, growth_rate=48, bottleneck=True, compression=0.5)
 
