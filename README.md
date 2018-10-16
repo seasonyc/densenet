@@ -8,7 +8,6 @@ This project includes:
  
  - testnet.py, a vgg-like model, a convnet model with bottle-neck layers and densenet-style skip connections.
  
- - incremental_densenet.py, a hard-code parameters densenet but with incremental growth rate, it's just a test model.
 
 
 # References
