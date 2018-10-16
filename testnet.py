@@ -120,6 +120,7 @@ def vgg_like(input_shape=None, func_block=conv_block, num_classes=None, dropout_
     x = MaxPooling2D((2, 2), strides=(2, 2))(x)
     x = func_block(x, 512)
     x = func_block(x, 512)
+    
     x = GlobalAveragePooling2D()(x)
     
     x = Dense(num_classes, activation='softmax', kernel_regularizer=l2(weight_decay), bias_regularizer=l2(weight_decay))(x)

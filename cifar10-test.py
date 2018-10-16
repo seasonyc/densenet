@@ -9,6 +9,8 @@ config.gpu_options.allow_growth = True
 set_session(tf.Session(config=config))
 '''
 import keras 
+import tensorflow as tf
+from tensorflow.python.client import timeline
 from keras.datasets import cifar10 
 from keras.preprocessing.image import ImageDataGenerator 
 from keras.models import load_model
@@ -20,10 +22,11 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from keras.callbacks import TensorBoard, LearningRateScheduler, ModelCheckpoint
 import densenet
-import incremental_densenet
 import testnet
  
 num_classes = 10 
+mem_stat = False
+profiling = False
 
 def color_norm(dataset):
     mean = np.array([125.3, 123.0, 113.9])
@@ -90,9 +93,22 @@ def train(model, x_train, y_train, x_validation, y_validation,
     #opt = keras.optimizers.Adam(lr=learning_rate, epsilon=1e-08) 
     opt = keras.optimizers.SGD(lr=learning_rate, momentum=0.9, nesterov=True) 
     
-    model.compile(loss='categorical_crossentropy', 
-                  optimizer=opt, 
-                  metrics=['accuracy']) 
+    run_options = None
+    run_metadata = None
+    
+    if profiling:
+        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+        run_metadata = tf.RunMetadata()
+        
+        model.compile(loss='categorical_crossentropy', 
+                      optimizer=opt, 
+                      metrics=['accuracy'],
+                      options=run_options,
+                      run_metadata=run_metadata) 
+    else:
+        model.compile(loss='categorical_crossentropy', 
+                      optimizer=opt, 
+                      metrics=['accuracy'])
                
     #to enable tensorboard
     #tensorboard = TensorBoard(log_dir='./logs', histogram_freq=10, write_graph=False, write_grads=True, write_images=True)
@@ -140,9 +156,19 @@ def train(model, x_train, y_train, x_validation, y_validation,
                             epochs=epochs_list[-1], 
                             callbacks=[lr_scheduler, checkpoint],
                             #, callbacks=[tensorboard]) 
-                            validation_data=(x_validation, y_validation)) #, callbacks=[tbCallBack]) 
-           
-
+                            validation_data=(x_validation, y_validation))
+         
+    if mem_stat:
+        sess = K.get_session()
+        print(sess.run(tf.contrib.memory_stats.MaxBytesInUse()))
+        # current usage
+        print(sess.run(tf.contrib.memory_stats.BytesInUse()))
+   
+    if profiling:
+        trace = timeline.Timeline(step_stats=run_metadata.step_stats)
+        with open('timeline.densenet.json', 'w') as f:
+            f.write(trace.generate_chrome_trace_format(show_memory=True))
+    
 def error_analyze(model, x, y):
     predicts = model.predict(x, verbose=1)
     print(predicts.shape)
@@ -223,14 +249,18 @@ def main_testnet(learning_rate, network, func_block, error_anal = False, dropout
 
 
 
+print('\n\n\n\n\n\n\ntest learning_rate = 0.1 densenet k=12 aug no dropout' )
+main_dense(0.1, densenet.DenseNet, dropout_rate=None, aug=True)
+
+
+'''     
+To train other models
+
 
 print('\n\n\n\n\n\n\ntest learning_rate = 0.1 densenet k=12 aug no dropout' )
 main_dense(0.1, densenet.DenseNet, dropout_rate=None, aug=True)
 
 
-
-'''     
-To train other models
 print('\n\n\n\n\n\n\ntest learning_rate = 0.1 densenet k=12 no aug dropout=0.2' )
 main_dense(0.1, densenet.DenseNet)
        
@@ -240,8 +270,6 @@ main_dense(0.1, densenet.DenseNet, depth = 76, dropout_rate=None, aug=True, bott
 print('\n\n\n\n\n\n\ntest learning_rate = 0.1 wide densenet k=48 aug no dropout' )
 main_dense(0.1, densenet.DenseNet, dropout_rate=None, aug=True, growth_rate=48, bottleneck=True, compression=0.5)
 
-print('\n\n\n\n\n\n\ntest learning_rate = 0.1 incremental densenet k=12 aug no dropout' )
-main_dense(0.1, incremental_densenet.DenseNet, dropout_rate=None, aug=True)
    
 
 print('\n\n\n\n\n\n\ntest learning_rate = 0.1 testnet aug no dropout' )
